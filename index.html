@@ -2,134 +2,111 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <title>以太坊公开抽奖工具</title>
+  <meta charset="UTF-8" />
+  <title>基于以太坊区块哈希的抽奖</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    select, input, button { margin: 5px; padding: 5px; }
-    #result { margin-top: 15px; font-weight: bold; font-size: 16px; }
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    select, input, button { margin: 5px 0; padding: 5px; width: 100%; }
+    .result { margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>以太坊公开抽奖工具</h2>
+  <h2>基于以太坊区块哈希的抽奖</h2>
 
-  <label>开奖时间：</label><br>
-  <select id="year"></select> 年
-  <select id="month"></select> 月
-  <select id="day"></select> 日
-  <select id="hour"></select> 时
-  <select id="minute"></select> 分钟
-  <br><br>
+  <label>选择开奖时间：</label><br/>
+  <select id="year"></select>
+  <select id="month"></select>
+  <select id="day"></select>
+  <select id="hour"></select>
+  <select id="minute"></select><br/>
 
   <label>参与人数：</label>
-  <input type="number" id="participantCount" min="1"><br>
+  <input type="number" id="participants" min="1" value="10" />
 
-  <label>获奖人数：</label>
-  <input type="number" id="winnerCount" min="1"><br><br>
+  <label>中奖人数：</label>
+  <input type="number" id="winners" min="1" value="1" />
 
-  <button onclick="startDraw()">开始抽奖</button>
+  <button onclick="draw()">开始抽奖</button>
 
-  <div id="result">等待输入...</div>
+  <div class="result" id="result">等待输入...</div>
 
   <script>
-    const yearSel = document.getElementById('year');
-    const monthSel = document.getElementById('month');
-    const daySel = document.getElementById('day');
-    const hourSel = document.getElementById('hour');
-    const minuteSel = document.getElementById('minute');
+    const apiKey = '1E98RSHP7K7B1WK3EDMQFEWN1VC7N3VKK9'; // 你的 Etherscan API Key
 
     const now = new Date();
-    for (let y = 2023; y <= now.getFullYear() + 2; y++) {
-      yearSel.innerHTML += `<option value="${y}">${y}</option>`;
+    for (let y = 2023; y <= now.getFullYear() + 1; y++) {
+      year.innerHTML += `<option value="${y}" ${y === now.getFullYear() ? 'selected' : ''}>${y}</option>`;
     }
     for (let m = 1; m <= 12; m++) {
-      monthSel.innerHTML += `<option value="${m}">${m}</option>`;
+      month.innerHTML += `<option value="${m}" ${m === now.getMonth() + 1 ? 'selected' : ''}>${m}</option>`;
     }
     for (let d = 1; d <= 31; d++) {
-      daySel.innerHTML += `<option value="${d}">${d}</option>`;
+      day.innerHTML += `<option value="${d}" ${d === now.getDate() ? 'selected' : ''}>${d}</option>`;
     }
     for (let h = 0; h < 24; h++) {
-      hourSel.innerHTML += `<option value="${h}">${h.toString().padStart(2, '0')}</option>`;
+      hour.innerHTML += `<option value="${h}" ${h === now.getHours() ? 'selected' : ''}>${h.toString().padStart(2, '0')}</option>`;
     }
-    for (let m = 0; m < 60; m++) {
-      minuteSel.innerHTML += `<option value="${m}">${m.toString().padStart(2, '0')}</option>`;
+    for (let mi = 0; mi < 60; mi++) {
+      minute.innerHTML += `<option value="${mi}" ${mi === now.getMinutes() ? 'selected' : ''}>${mi.toString().padStart(2, '0')}</option>`;
     }
 
-    async function startDraw() {
-      const year = +yearSel.value;
-      const month = +monthSel.value;
-      const day = +daySel.value;
-      const hour = +hourSel.value;
-      const minute = +minuteSel.value;
-      const count = parseInt(document.getElementById('participantCount').value);
-      const winnerCount = parseInt(document.getElementById('winnerCount').value);
+    async function draw() {
+      const y = +year.value, m = +month.value - 1, d = +day.value, h = +hour.value, mi = +minute.value;
+      const drawTime = new Date(y, m, d, h, mi, 0);
+      const timestamp = Math.floor(drawTime.getTime() / 1000);
+      const nowTs = Math.floor(Date.now() / 1000);
+      const participants = parseInt(document.getElementById('participants').value);
+      const winners = parseInt(document.getElementById('winners').value);
       const resultDiv = document.getElementById('result');
 
-      if (!count || count <= 0) {
-        resultDiv.textContent = "请输入有效的参与人数。";
+      if (timestamp > nowTs) {
+        resultDiv.innerText = '等待开奖时间到达...';
         return;
       }
-      if (!winnerCount || winnerCount <= 0 || winnerCount > count) {
-        resultDiv.textContent = "请输入有效的获奖人数（且不超过参与人数）。";
-        return;
-      }
-
-      const drawTime = new Date(Date.UTC(year, month - 1, day, hour, minute));
-      const now = new Date();
-      if (now < drawTime) {
-        resultDiv.textContent = "等待抽奖...";
-        return;
-      }
-
-      const timestamp = Math.floor(drawTime.getTime() / 1000);
-      const apiKey = '1E98RSHP7K7B1WK3EDMQFEWN1VC7N3VKK9';
-      const url = `https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before&apikey=${apiKey}`;
-
-      resultDiv.textContent = "查询中，请稍候...";
 
       try {
-        const res = await fetch(url);
-        const data = await res.json();
-        const blockNumber = data.result;
+        resultDiv.innerText = '正在查询区块号...';
+        const res1 = await fetch(`https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before&apikey=${apiKey}`);
+        const data1 = await res1.json();
+        const blockNumber = parseInt(data1.result);
 
-        const hashRes = await fetch(`https://api.etherscan.io/api?module=block&action=getblockreward&blockno=${blockNumber}&apikey=${apiKey}`);
-        const hashData = await hashRes.json();
-        const hash = hashData.result.blockHash;
+        const hexBlock = '0x' + blockNumber.toString(16);
+        resultDiv.innerText = '正在获取区块哈希...';
+        const res2 = await fetch(`https://api.etherscan.io/api?module=proxy&action=eth_getBlockByNumber&tag=${hexBlock}&boolean=false&apikey=${apiKey}`);
+        const data2 = await res2.json();
+        const hash = data2.result.hash;
 
-        const winners = drawWinners(hash, count, winnerCount);
+        if (!hash) {
+          resultDiv.innerText = '未能获取区块哈希';
+          return;
+        }
 
-        resultDiv.innerHTML = `
-          区块号：${blockNumber}<br>
-          区块哈希：${hash}<br>
-          参与人数：${count}<br>
-          获奖人数：${winnerCount}<br><br>
-          <strong>中奖编号为：${winners.join(', ')}</strong>
-        `;
-      } catch (err) {
-        resultDiv.textContent = "查询失败，请检查网络或 API Key 是否正确。";
+        const seed = parseInt(hash.slice(2, 18), 16); // 取哈希前部分作为随机种子
+        const rng = mulberry32(seed);
+
+        const numbers = Array.from({length: participants}, (_, i) => i + 1);
+        const winnersList = [];
+
+        for (let i = 0; i < Math.min(winners, participants); i++) {
+          const idx = Math.floor(rng() * numbers.length);
+          winnersList.push(numbers.splice(idx, 1)[0]);
+        }
+
+        resultDiv.innerText = `开奖区块号：${blockNumber}\n哈希：${hash}\n中奖号码：${winnersList.join(', ')}`;
+
+      } catch (e) {
+        console.error(e);
+        resultDiv.innerText = '查询失败，请检查网络或API Key是否正确';
       }
     }
 
-    function mulberry32(seed) {
+    function mulberry32(a) {
       return function() {
-        let t = seed += 0x6D2B79F5;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-      }
-    }
-
-    function drawWinners(hash, total, count) {
-      const seedHex = hash.slice(-8);
-      const seed = parseInt(seedHex, 16);
-      const rng = mulberry32(seed);
-
-      const arr = Array.from({ length: total }, (_, i) => i);
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr.slice(0, count);
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
     }
   </script>
 </body>
