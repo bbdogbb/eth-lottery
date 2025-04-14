@@ -3,35 +3,90 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>基于以太坊区块哈希的抽奖</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>以太坊区块抽奖</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    select, input, button { margin: 5px 0; padding: 5px; width: 100%; }
-    .result { margin-top: 20px; font-weight: bold; }
+    body {
+      background-color: #0d0d0d;
+      color: #dddddd;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      color: #00ffff;
+      text-align: center;
+      text-shadow: 0 0 10px #00ffff;
+    }
+    .container {
+      max-width: 480px;
+      margin: auto;
+    }
+    label {
+      display: block;
+      margin-top: 20px;
+      font-size: 16px;
+    }
+    select, input, button {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      border-radius: 5px;
+      border: 1px solid #555555;
+      background-color: #1a1a1a;
+      color: #dddddd;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #0044ff;
+      color: #ffffff;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      margin-top: 20px;
+      box-shadow: 0 0 10px #0044ff;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background-color: #0066ff;
+      transform: scale(1.02);
+    }
+    .result {
+      margin-top: 30px;
+      padding: 15px;
+      background-color: #222222;
+      border-radius: 5px;
+      border: 1px solid #444444;
+      white-space: pre-wrap;
+      text-shadow: 0 0 5px #00ffff;
+    }
   </style>
 </head>
 <body>
-  <h2>基于以太坊区块哈希的抽奖</h2>
+  <div class="container">
+    <h2>以太坊区块抽奖</h2>
 
-  <label>选择开奖时间：</label><br/>
-  <select id="year"></select>
-  <select id="month"></select>
-  <select id="day"></select>
-  <select id="hour"></select>
-  <select id="minute"></select><br/>
+    <label>选择开奖时间：</label>
+    <select id="year"></select>
+    <select id="month"></select>
+    <select id="day"></select>
+    <select id="hour"></select>
+    <select id="minute"></select>
 
-  <label>参与人数：</label>
-  <input type="number" id="participants" min="1" value="10" />
+    <label>参与人数：</label>
+    <input type="number" id="participants" min="1" value="10" />
 
-  <label>中奖人数：</label>
-  <input type="number" id="winners" min="1" value="1" />
+    <label>中奖人数：</label>
+    <input type="number" id="winners" min="1" value="1" />
 
-  <button onclick="draw()">开始抽奖</button>
+    <button onclick="draw()">开始抽奖</button>
 
-  <div class="result" id="result">等待输入...</div>
+    <div class="result" id="result">等待输入...</div>
+  </div>
 
   <script>
-    const apiKey = '1E98RSHP7K7B1WK3EDMQFEWN1VC7N3VKK9'; // 你的 Etherscan API Key
+    const apiKey = '1E98RSHP7K7B1WK3EDMQFEWN1VC7N3VKK9';
 
     const now = new Date();
     for (let y = 2023; y <= now.getFullYear() + 1; y++) {
@@ -81,9 +136,8 @@
           return;
         }
 
-        const seed = parseInt(hash.slice(2, 18), 16); // 取哈希前部分作为随机种子
+        const seed = parseInt(hash.slice(2, 18), 16);
         const rng = mulberry32(seed);
-
         const numbers = Array.from({length: participants}, (_, i) => i + 1);
         const winnersList = [];
 
@@ -93,7 +147,6 @@
         }
 
         resultDiv.innerText = `开奖区块号：${blockNumber}\n哈希：${hash}\n中奖号码：${winnersList.join(', ')}`;
-
       } catch (e) {
         console.error(e);
         resultDiv.innerText = '查询失败，请检查网络或API Key是否正确';
